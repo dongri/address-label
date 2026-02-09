@@ -1,6 +1,6 @@
-# AddressLabel - Blockchain Address Labeler
+# Address Label - Crypto Address Book & Replacer
 
-**AddressLabel** is a Chrome Extension that replaces blockchain addresses (Ethereum/EVM) with custom nicknames across the web.
+**Address Label** is a Chrome Extension that replaces blockchain addresses (EVM, Bitcoin, Solana) with custom nicknames across the web.
 
 ## 🛡️ Privacy & Security: 100% Local & Safe
 
@@ -9,6 +9,12 @@
 - **No External Communication**: This extension **never** sends data to any external server, API, or third-party service.
 - **No Tracking**: We do not track your browsing history or collect any usage analytics.
 - **Open Source**: You can inspect the code to verify that no data ever leaves your machine.
+
+## Supported Chains
+
+- **EVM (Ethereum, Polygon, BSC, etc.)**: `0x...`
+- **Bitcoin**: `bc1...`, `1...`, `3...`
+- **Solana**: Base58 addresses (e.g., `5U1...`)
 
 ## Installation (Developer Mode)
 
@@ -22,7 +28,7 @@
 
 1. **Add a Label**:
    - **Method A**: Click the extension icon to open the manager and add addresses manually.
-   - **Method B**: Select any `0x...` address on a web page with your mouse. An "Add Label" popup will appear. Enter a nickname and save.
+   - **Method B**: Select any crypto address (EVM, BTC, SOL) on a web page with your mouse. An "Add Label" popup will appear. Enter a nickname and save.
 
 2. **View Labels**:
    - The addresses on the page will be replaced by the nickname (e.g., `My Main Wallet`).

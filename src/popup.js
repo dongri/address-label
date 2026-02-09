@@ -78,11 +78,27 @@ function addAddress() {
     const rawAddr = addressInput.value.trim();
     const nickname = nicknameInput.value.trim();
 
-    // Basic validation
-    // 0x + 40 hex chars = 42 chars
-    const ethRegex = /^0x[a-fA-F0-9]{40}$/;
-    if (!ethRegex.test(rawAddr)) {
-        alert('Error: Invalid Ethereum address format.');
+    // Regex definitions
+    const evmRegex = /^0x[a-fA-F0-9]{40}$/i;
+    // BTC: Legacy (1...), Script (3...), Segwit (bc1...)
+    const btcRegex = /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,59}$/;
+    // SOL: Base58, 32-44 chars
+    const solRegex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
+    let addrKey = rawAddr;
+
+    // Validation & Normalization
+    if (evmRegex.test(rawAddr)) {
+        // EVM: Normalize to lowercase
+        addrKey = rawAddr.toLowerCase();
+    } else if (btcRegex.test(rawAddr)) {
+        // BTC: Case sensitive
+        addrKey = rawAddr;
+    } else if (solRegex.test(rawAddr)) {
+        // SOL: Case sensitive
+        addrKey = rawAddr;
+    } else {
+        alert('Error: Invalid address format. Supported: EVM (0x...), Bitcoin, Solana.');
         return;
     }
 
@@ -90,8 +106,6 @@ function addAddress() {
         alert('Error: Nickname cannot be empty.');
         return;
     }
-
-    const addrKey = rawAddr.toLowerCase();
 
     chrome.storage.local.get(['addressMap'], (result) => {
         const map = result.addressMap || {};

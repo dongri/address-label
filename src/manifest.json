@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "AddressLabel",
-  "version": "1.0",
+  "name": "Address Label",
+  "version": "1.0.1",
   "description": "Replace blockchain addresses with custom nicknames across the web. Manage and label your crypto addresses easily.",
   "permissions": [
     "storage",

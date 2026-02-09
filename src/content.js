@@ -1,8 +1,11 @@
 /* content.js */
 
 // Configuration
-const ETH_ADDRESS_GLOBAL = /0x[a-fA-F0-9]{40}/g;
-const ETH_ADDRESS_CHECK = /0x[a-fA-F0-9]{40}/;
+// Combined Regex for EVM, BTC, SOL
+const MULTI_CHAIN_REGEX = /((?:0x[a-fA-F0-9]{40})|(?:\b(?:bc1|[13])[a-zA-HJ-NP-Z0-9]{25,59}\b)|(?:\b[1-9A-HJ-NP-Za-km-z]{32,44}\b))/g;
+// For quick check (non-global)
+const MULTI_CHAIN_CHECK = /((?:0x[a-fA-F0-9]{40})|(?:\b(?:bc1|[13])[a-zA-HJ-NP-Z0-9]{25,59}\b)|(?:\b[1-9A-HJ-NP-Za-km-z]{32,44}\b))/;
+
 const IGNORE_TAGS = ['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'CODE', 'PRE'];
 
 const COPY_ICON_SVG = `
@@ -18,6 +21,21 @@ const COPIED_ICON_SVG = `
 const LABEL_ICON_URL = chrome.runtime.getURL('icons/icon16.png');
 
 let addressMap = {};
+
+// Helper: Normalize address for lookup
+function normalizeKey(addr) {
+    if (!addr) return '';
+    // EVM Addresses are case-insensitive, store as lowercase
+    if (addr.match(/^0x[a-fA-F0-9]{40}$/i)) {
+        return addr.toLowerCase();
+    }
+    // BTC (Legacy/Script) and SOL are case-sensitive.
+    // BTC Bech32 (bc1...) is actually case-insensitive but standard is lowercase.
+    // For simplicity, we can try exact match first, then lowercase for bc1?
+    // Current Popup.js saves 'bc1' as is (usually input as lowercase).
+    // Let's keep it simple: return as is for non-EVM.
+    return addr;
+}
 
 // Load saved addresses
 chrome.storage.local.get(['addressMap'], (result) => {
@@ -56,8 +74,10 @@ function updateExistingReplacements() {
     const replacements = document.querySelectorAll('.address-label-replaced');
     replacements.forEach(span => {
         const addr = span.getAttribute('data-original-address');
-        if (addr && addressMap[addr.toLowerCase()]) {
-            const nickname = addressMap[addr.toLowerCase()];
+        const key = normalizeKey(addr);
+
+        if (key && addressMap[key]) {
+            const nickname = addressMap[key];
             // Rebuild to ensure icon and structure
             span.innerHTML = `
                 <img src="${LABEL_ICON_URL}" class="address-label-icon" />
@@ -95,7 +115,7 @@ function scanAndReplace(rootNode) {
                     return NodeFilter.FILTER_REJECT;
                 }
 
-                if (ETH_ADDRESS_CHECK.test(node.nodeValue)) {
+                if (MULTI_CHAIN_CHECK.test(node.nodeValue)) {
                     return NodeFilter.FILTER_ACCEPT;
                 }
                 return NodeFilter.FILTER_SKIP;
@@ -112,11 +132,11 @@ function scanAndReplace(rootNode) {
         const text = node.nodeValue;
 
         let hasMatch = false;
-        let tempHtml = text.replace(ETH_ADDRESS_GLOBAL, (match) => {
-            const lowerAddr = match.toLowerCase();
-            if (addressMap[lowerAddr]) {
+        let tempHtml = text.replace(MULTI_CHAIN_REGEX, (match) => {
+            const key = normalizeKey(match);
+            if (addressMap[key]) {
                 hasMatch = true;
-                const nickname = addressMap[lowerAddr];
+                const nickname = addressMap[key];
                 return `<span class="address-label-replaced" data-original-address="${match}">
                     <img src="${LABEL_ICON_URL}" class="address-label-icon" />
                     ${nickname}
@@ -222,9 +242,11 @@ saveBtn.addEventListener('click', (e) => {
     const addr = addrInput.value;
 
     if (name && addr) {
+        // Check formatting one last time? Not strictly needed if input came from valid selection.
         chrome.storage.local.get(['addressMap'], (result) => {
             const map = result.addressMap || {};
-            map[addr.toLowerCase()] = name;
+            // Use normalizeKey for consistency
+            map[normalizeKey(addr)] = name;
             chrome.storage.local.set({ addressMap: map }, () => {
                 closePopup();
             });
@@ -247,14 +269,18 @@ document.addEventListener('mouseup', (e) => {
     if (!selection.rangeCount) return;
 
     const selectedText = selection.toString().trim();
-    const match = selectedText.match(/^0x[a-fA-F0-9]{40}$/);
+    if (!selectedText) return;
 
-    if (match) {
-        const address = match[0];
+    // Strict validation for popup to avoid false positives
+    const isEVM = /^0x[a-fA-F0-9]{40}$/i.test(selectedText);
+    const isBTC = /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,59}$/.test(selectedText);
+    const isSOL = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(selectedText);
+
+    if (isEVM || isBTC || isSOL) {
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
 
-        addrInput.value = address;
+        addrInput.value = selectedText;
 
         const top = window.scrollY + rect.bottom + 10;
         const left = window.scrollX + rect.left;
@@ -263,10 +289,12 @@ document.addEventListener('mouseup', (e) => {
         popup.style.left = `${left}px`;
         popup.style.display = 'block';
 
+        const key = normalizeKey(selectedText);
+
         chrome.storage.local.get(['addressMap'], (result) => {
             const map = result.addressMap || {};
-            if (map[address.toLowerCase()]) {
-                nameInput.value = map[address.toLowerCase()];
+            if (map[key]) {
+                nameInput.value = map[key];
             } else {
                 nameInput.value = '';
             }
