@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>AddressLabel Manager</title>
+  <style>
+    :root {
+      --bg-color: #0d1117;
+      --card-bg: #161b22;
+      --border-color: #30363d;
+      --text-main: #c9d1d9;
+      --text-sub: #8b949e;
+      --accent-color: #58a6ff;
+      --accent-hover: #1f6feb;
+      --danger-color: #f85149;
+      --success-color: #238636;
+      --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+
+    body {
+      width: 450px;
+      font-family: var(--font-mono);
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      padding: 16px;
+      margin: 0;
+      font-size: 13px;
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 16px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+      color: var(--text-main);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .add-form {
+      background: var(--card-bg);
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 11px;
+      margin-bottom: 4px;
+      color: var(--text-sub);
+      text-transform: uppercase;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+      background-color: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent-color);
+    }
+
+    button#add-btn {
+      background-color: var(--success-color);
+      color: white;
+      border: 1px solid rgba(240, 246, 252, 0.1);
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      width: 100%;
+      transition: opacity 0.2s;
+    }
+
+    button#add-btn:hover {
+      opacity: 0.9;
+    }
+
+    .address-list {
+      max-height: 320px;
+      overflow-y: auto;
+      border-top: 1px solid var(--border-color);
+    }
+
+    /* Scrollbar styling */
+    .address-list::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .address-list::-webkit-scrollbar-track {
+      background: var(--bg-color);
+    }
+
+    .address-list::-webkit-scrollbar-thumb {
+      background-color: var(--border-color);
+      border-radius: 4px;
+    }
+
+    .address-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      /* Align items to the bottom */
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .address-info {
+      flex-grow: 1;
+      overflow: hidden;
+      margin-right: 10px;
+    }
+
+    .nickname {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--accent-color);
+      margin-bottom: 4px;
+    }
+
+    .address {
+      font-size: 11px;
+      color: var(--text-sub);
+      white-space: nowrap;
+      opacity: 0.8;
+      line-height: 1.4;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .action-btn {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-sub);
+      padding: 4px 8px;
+      font-size: 11px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: var(--border-color);
+      color: var(--text-main);
+    }
+
+    .delete-btn:hover {
+      border-color: var(--danger-color);
+      color: var(--danger-color);
+      background: rgba(248, 81, 73, 0.1);
+    }
+
+    .edit-btn:hover {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+      background: rgba(88, 166, 255, 0.1);
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--text-sub);
+      padding: 30px 0;
+      font-style: italic;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>> AddressLabel_Manager</h2>
+
+  <div class="add-form">
+    <div class="input-group">
+      <label for="address">Address (0x...)</label>
+      <input type="text" id="address" placeholder="0x1234..." autocomplete="off">
+    </div>
+    <div class="input-group">
+      <label for="nickname">Label</label>
+      <input type="text" id="nickname" placeholder="My_Main_Wallet" autocomplete="off">
+    </div>
+    <button id="add-btn">ADD RECORD</button>
+  </div>
+
+  <div id="list-container" class="address-list">
+    <!-- List items will be injected here -->
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+
+</html>
