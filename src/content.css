@@ -24,58 +24,26 @@
 }
 
 /* Tooltip container (hidden by default) */
+/* Tooltip container (Global Fixed) */
 .address-tooltip {
-  visibility: hidden;
+  display: none;
+  /* Toggled by JS */
+  position: fixed;
+  z-index: 10000;
   background-color: #333;
   color: #fff;
   text-align: center;
   border-radius: 4px;
   padding: 6px 10px;
-  position: absolute;
-  z-index: 10000;
-  bottom: 100%;
-  /* moved down to touch the element */
-  margin-bottom: 8px;
-  /* space created by margin */
-  left: 50%;
-  transform: translateX(-50%);
-  opacity: 0;
-  transition: opacity 0.2s;
   font-family: monospace;
   font-size: 12px;
   white-space: nowrap;
-  /* One line */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   pointer-events: auto;
   min-width: max-content;
-  display: flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  /* Explicitly pointer for copy action */
-}
-
-/* Invisible bridge to prevent tooltip disappearing when moving mouse */
-.address-tooltip::before {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 100%;
-  height: 8px;
-  /* Height of the margin-bottom */
-}
-
-/* Tooltip arrow */
-.address-tooltip::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  margin-left: -5px;
-  border-width: 5px;
-  border-style: solid;
-  border-color: #333 transparent transparent transparent;
 }
 
 /* Copy Icon styling */
@@ -91,19 +59,9 @@
   fill: currentColor;
 }
 
-/* Show tooltip on hover */
-.address-label-replaced:hover .address-tooltip {
-  visibility: visible;
-  opacity: 1;
-}
-
 /* Copied animation state */
 .address-tooltip.copied {
   background-color: #238636;
-}
-
-.address-tooltip.copied::after {
-  border-color: #238636 transparent transparent transparent;
 }
 
 /* Bookmark/Add popup */
@@ -136,6 +94,8 @@
   border: 1px solid #ddd;
   border-radius: 3px;
   box-sizing: border-box;
+  background-color: #fff;
+  color: #333;
 }
 
 #address-label-popup button {
@@ -163,4 +123,31 @@
   padding: 0;
   cursor: pointer;
   border: none;
+}
+
+/* Trigger Button */
+#address-label-trigger {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background-color: #007bff;
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  z-index: 2147483647;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+#address-label-trigger:hover {
+  transform: scale(1.1);
+  background-color: #0056b3;
+}
+
+#address-label-trigger svg {
+  width: 14px;
+  height: 14px;
+  fill: white;
 }

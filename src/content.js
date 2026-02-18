@@ -79,14 +79,7 @@ function updateExistingReplacements() {
         if (key && addressMap[key]) {
             const nickname = addressMap[key];
             // Rebuild to ensure icon and structure
-            span.innerHTML = `
-                <img src="${LABEL_ICON_URL}" class="address-label-icon" />
-                ${nickname}
-                <span class="address-tooltip">
-                    ${addr}
-                    <span class="copy-icon">${COPY_ICON_SVG}</span>
-                </span>
-             `;
+            span.innerHTML = `<img src="${LABEL_ICON_URL}" class="address-label-icon" />${nickname}`;
         }
     });
 }
@@ -137,14 +130,7 @@ function scanAndReplace(rootNode) {
             if (addressMap[key]) {
                 hasMatch = true;
                 const nickname = addressMap[key];
-                return `<span class="address-label-replaced" data-original-address="${match}">
-                    <img src="${LABEL_ICON_URL}" class="address-label-icon" />
-                    ${nickname}
-                    <span class="address-tooltip">
-                        ${match}
-                        <span class="copy-icon">${COPY_ICON_SVG}</span>
-                    </span>
-                </span>`;
+                return `<span class="address-label-replaced" data-original-address="${match}"><img src="${LABEL_ICON_URL}" class="address-label-icon" />${nickname}</span>`;
             }
             return match;
         });
@@ -164,43 +150,118 @@ function scanAndReplace(rootNode) {
 }
 
 // Add global click listener for copy functionality
-document.addEventListener('click', (e) => {
-    // Only intercept clicks within the tooltip (address or copy icon)
-    // The closest() method will find the .address-tooltip wrapper if clicked on text or icon inside it
-    const tooltipWrapper = e.target.closest('.address-tooltip');
+// --- Global Tooltip UI ---
 
-    if (tooltipWrapper) {
-        // Find the parent label that holds the address data
-        const label = tooltipWrapper.closest('.address-label-replaced');
+const tooltip = document.createElement('div');
+tooltip.className = 'address-tooltip';
+// Initial structure
+tooltip.innerHTML = `
+    <span class="address-text"></span>
+    <span class="copy-icon">${COPY_ICON_SVG}</span>
+`;
+if (document.body) {
+    document.body.appendChild(tooltip);
+} else {
+    // Fallback if body not ready (unlikely for content script run_at_document_end but good practice)
+    document.addEventListener('DOMContentLoaded', () => {
+        document.body.appendChild(tooltip);
+    });
+}
 
-        if (label) {
-            // Prevent default behavior (navigating links) and stopping bubbling
-            e.preventDefault();
-            e.stopPropagation();
+let tooltipHideTimeout;
 
-            const addr = label.getAttribute('data-original-address');
-            if (addr) {
-                navigator.clipboard.writeText(addr).then(() => {
-                    // Show feedback
-                    const icon = tooltipWrapper.querySelector('.copy-icon');
+function showTooltip(label) {
+    const addr = label.getAttribute('data-original-address');
+    if (!addr) return;
 
-                    if (icon) {
-                        const originalIcon = icon.innerHTML;
+    tooltip.querySelector('.address-text').textContent = addr;
+    tooltip.setAttribute('data-current-address', addr);
 
-                        tooltipWrapper.classList.add('copied');
-                        icon.innerHTML = COPIED_ICON_SVG;
+    // Reset copy state
+    tooltip.classList.remove('copied');
+    tooltip.querySelector('.copy-icon').innerHTML = COPY_ICON_SVG;
 
-                        setTimeout(() => {
-                            tooltipWrapper.classList.remove('copied');
-                            icon.innerHTML = originalIcon;
-                        }, 2000);
-                    }
-                });
-            }
-        }
+    tooltip.style.display = 'flex';
+
+    // Positioning
+    const rect = label.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+
+    // Default: Top centered
+    let top = rect.top - tooltipRect.height - 8;
+    let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+
+    // Flip to bottom if not enough space on top
+    if (top < 0) {
+        top = rect.bottom + 8;
+        // Adjust arrow direction logic here if needed via class, 
+        // but for simplicity we keep one style or just rely on floating look.
     }
-    // If click matches .address-label-replaced but NOT .address-tooltip (i.e. the nickname),
-    // we do nothing here, allowing the event to bubble and trigger standard link navigation.
+
+    // Keep within horizontal bounds
+    if (left < 5) left = 5;
+    if (left + tooltipRect.width > window.innerWidth - 5) {
+        left = window.innerWidth - tooltipRect.width - 5;
+    }
+
+    tooltip.style.top = `${top}px`;
+    tooltip.style.left = `${left}px`;
+}
+
+function hideTooltip() {
+    tooltip.style.display = 'none';
+}
+
+// Event Delegation for Tooltip Interactions
+document.addEventListener('mouseover', (e) => {
+    const label = e.target.closest('.address-label-replaced');
+    const tooltipEl = e.target.closest('.address-tooltip');
+
+    if (label) {
+        clearTimeout(tooltipHideTimeout);
+        showTooltip(label);
+    } else if (tooltipEl) {
+        // If hovering the tooltip itself, keep it open
+        clearTimeout(tooltipHideTimeout);
+    }
+});
+
+document.addEventListener('mouseout', (e) => {
+    const label = e.target.closest('.address-label-replaced');
+    const tooltipEl = e.target.closest('.address-tooltip');
+
+    // Only set hide timeout if we are leaving relevant elements
+    if (label || tooltipEl) {
+        tooltipHideTimeout = setTimeout(() => {
+            hideTooltip();
+        }, 300); // Small delay to allow moving from label to tooltip
+    }
+});
+
+// Copy Logic (Updated for Global Tooltip)
+tooltip.addEventListener('click', (e) => {
+    // Prevent closing or bubbling
+    e.stopPropagation();
+    e.preventDefault();
+
+    const addr = tooltip.getAttribute('data-current-address');
+    if (addr) {
+        navigator.clipboard.writeText(addr).then(() => {
+            const icon = tooltip.querySelector('.copy-icon');
+            if (icon) {
+                const originalIcon = COPY_ICON_SVG; // Use constant
+                tooltip.classList.add('copied');
+                icon.innerHTML = COPIED_ICON_SVG;
+
+                setTimeout(() => {
+                    if (tooltip.getAttribute('data-current-address') === addr) {
+                        tooltip.classList.remove('copied');
+                        icon.innerHTML = originalIcon;
+                    }
+                }, 2000);
+            }
+        });
+    }
 });
 
 // --- Selection UI ---
@@ -221,6 +282,20 @@ if (document.body) {
     document.body.appendChild(popup);
 }
 
+// Create the trigger button (small icon)
+const triggerBtn = document.createElement('div');
+triggerBtn.id = 'address-label-trigger';
+triggerBtn.innerHTML = `
+<svg viewBox="0 0 24 24">
+  <path d="M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7v10c0 1.1.9 1.99 2 1.99L16 19c.67 0 1.27-.33 1.63-.84L22 12l-4.37-6.16zM16 17H5V7h11l3.55 5L16 17z"/>
+</svg>`;
+// Alternative icon (plus): <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+// Using label-like icon above.
+
+if (document.body) {
+    document.body.appendChild(triggerBtn);
+}
+
 const nameInput = popup.querySelector('#address-label-name');
 const addrInput = popup.querySelector('#address-label-addr');
 const saveBtn = popup.querySelector('#address-label-save');
@@ -231,10 +306,45 @@ function closePopup() {
     nameInput.value = '';
 }
 
+function closeTrigger() {
+    triggerBtn.style.display = 'none';
+}
+
 closeBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     closePopup();
 });
+
+triggerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    // Show popup
+    const top = parseInt(triggerBtn.style.top);
+    const left = parseInt(triggerBtn.style.left);
+
+    popup.style.top = `${top}px`;
+    popup.style.left = `${left}px`;
+    popup.style.display = 'block';
+
+    // Hide trigger
+    closeTrigger();
+
+    // Populate name
+    const addr = addrInput.value;
+    const key = normalizeKey(addr);
+
+    chrome.storage.local.get(['addressMap'], (result) => {
+        const map = result.addressMap || {};
+        if (map[key]) {
+            nameInput.value = map[key];
+        } else {
+            nameInput.value = '';
+        }
+        nameInput.focus();
+    });
+});
+
 
 saveBtn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -260,16 +370,27 @@ popup.addEventListener('mouseup', (e) => {
 popup.addEventListener('mousedown', (e) => {
     e.stopPropagation();
 });
+triggerBtn.addEventListener('mouseup', (e) => {
+    e.stopPropagation();
+});
+triggerBtn.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+});
 
 // Listen for selection
 document.addEventListener('mouseup', (e) => {
-    if (popup.contains(e.target)) return;
+    if (popup.contains(e.target) || triggerBtn.contains(e.target)) return;
 
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
 
     const selectedText = selection.toString().trim();
-    if (!selectedText) return;
+    if (!selectedText) {
+        // If clicked elsewhere and no selection, close everything
+        if (popup.style.display === 'block') closePopup();
+        if (triggerBtn.style.display !== 'none') closeTrigger();
+        return;
+    }
 
     // Strict validation for popup to avoid false positives
     const isEVM = /^0x[a-fA-F0-9]{40}$/i.test(selectedText);
@@ -277,32 +398,27 @@ document.addEventListener('mouseup', (e) => {
     const isSOL = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(selectedText);
 
     if (isEVM || isBTC || isSOL) {
+        // Prepare data but don't show popup yet
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
 
         addrInput.value = selectedText;
 
-        const top = window.scrollY + rect.bottom + 10;
-        const left = window.scrollX + rect.left;
+        const top = window.scrollY + rect.bottom + 5;
+        const left = window.scrollX + rect.right + 5; // Position near end of selection
 
-        popup.style.top = `${top}px`;
-        popup.style.left = `${left}px`;
-        popup.style.display = 'block';
+        // Show trigger instead of popup
+        triggerBtn.style.top = `${top}px`;
+        triggerBtn.style.left = `${left}px`;
+        triggerBtn.style.display = 'flex';
 
-        const key = normalizeKey(selectedText);
+        // Hide popup if it was open for another address (optional logic, but safe to close)
+        closePopup();
 
-        chrome.storage.local.get(['addressMap'], (result) => {
-            const map = result.addressMap || {};
-            if (map[key]) {
-                nameInput.value = map[key];
-            } else {
-                nameInput.value = '';
-            }
-            nameInput.focus();
-        });
     } else {
         if (popup.style.display === 'block') {
             closePopup();
         }
+        closeTrigger();
     }
 });
